@@ -10,17 +10,17 @@ def get_by_id(idx: int) -> Task:
     return lst[0] if len(lst) > 0 else None
 
 
-@router.get("/", response_model=list[Task])
+@router.get("/", response_model=list[Task], status_code=200)
 async def get_list():
     return tasks
 
 
-@router.get("/{tid}", response_model=Task)
+@router.get("/{tid}", response_model=Task, status_code=200)
 async def get_item(tid: int):
     return get_by_id(tid)
 
 
-@router.delete("/{tid}", response_model=Task|None, status_code=204)
+@router.delete("/{tid}", response_model=Task|None)
 async def remove(tid: int):
     task = get_by_id(tid)
     if not task:
@@ -39,7 +39,7 @@ async def create(data: Task):
     return data
 
 
-@router.put("/{tid}", response_model=Task)
+@router.put("/{tid}", response_model=Task, status_code=200)
 async def update(tid: int, name: str):
     task = get_by_id(tid)
     if task:

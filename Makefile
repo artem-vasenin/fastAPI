@@ -6,13 +6,18 @@ P ?= 8080
 help:
 	@echo "Commands:"
 	@echo "\tmake help"
-	@echo "\tmake run H=... P=..."
+	@echo "\tmake dev H=... P=..."
+	@echo "\tmake prod H=... P=..."
 	@echo "\tmake i L=..."
 	@echo "\tmake ui L=..."
 
-run:
+dev:
 	@echo "Server started"
-	PYTHONPATH=src uvicorn src.main:app --reload --host ${H} --port ${P}
+	PYTHONPATH=src uvicorn src.main:app --reload --host ${H} --port ${P} --env-file .local.env
+
+prod:
+	@echo "Server started"
+	PYTHONPATH=src uvicorn src.main:app --reload --host ${H} --port ${P} --env-file .prod.env
 
 i:
 	@echo "Install package ${L}"
