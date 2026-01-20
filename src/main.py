@@ -1,47 +1,53 @@
-from fastapi import FastAPI, status, HTTPException
+from fastapi import FastAPI, HTTPException, status, Form, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import time
+
 
 app = FastAPI()
 
-class Msg(BaseModel):
+# Настройка Jinja2 и статических файлов
+templates = Jinja2Templates(directory="src/templates")
+app.mount("/static", StaticFiles(directory="src/static"), name="static")
+
+
+# Модель для входных данных (запросов: создание и обновление)
+class MessageCreate(BaseModel):
+    content: str
+
+
+# Модель для ответов и хранения в базе данных
+class Message(BaseModel):
     id: int
     content: str
 
-class CreateMsg(BaseModel):
-    content: str
 
-msg_db: list[Msg] = [Msg(id=1, content='Hello Rusich')]
+# Инициализируем messages_db как список объектов Message
+messages_db: list[Message] = [Message(id=0, content="Первое сообщение в FastAPI")]
 
-@app.get('/msg', response_model=list[Msg])
-async def get_list()->list[Msg]:
-    return msg_db
 
-@app.get('/msg/{idx}', response_model=Msg)
-async def get_item(idx: int)->Msg:
-    for m in msg_db:
-        if m.id == idx:
-            return m
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Item is not found')
+@app.get("/web/messages", response_class=HTMLResponse)
+async def get_messages_page(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request, "messages": messages_db})
 
-@app.post('/msg', response_model=list[Msg], status_code=status.HTTP_201_CREATED)
-async def add_msg(msg: CreateMsg)->list[Msg]:
-    ts_ms = int(time.time() * 1000)
-    msg_db.append(Msg(id=ts_ms, content=msg.content))
-    return msg_db
+# Страница создания сообщения
+@app.get("/web/messages/create", response_class=HTMLResponse)
+async def get_create_message_page(request: Request):
+    return templates.TemplateResponse("create.html", {"request": request})
 
-@app.put('/msg/{idx}', response_model=list[Msg])
-async def update_msg(msg: CreateMsg, idx: int)->list[Msg]:
-    for i, m in enumerate(msg_db):
-        if m.id == idx:
-            msg_db[i].content = msg.content
-            return msg_db
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Msg not found")
+# Обработка формы создания сообщения
+@app.post("/web/messages", response_class=HTMLResponse)
+async def create_message_form(request: Request, content: str = Form(...)):
+    next_id = max((msg.id for msg in messages_db), default=-1) + 1
+    new_message = Message(id=next_id, content=content)
+    messages_db.append(new_message)
+    return templates.TemplateResponse("index.html", {"request": request, "messages": messages_db})
 
-@app.delete('/msg/{idx}')
-async def del_msg(idx: int)->list[Msg]:
-    for i, m in enumerate(msg_db):
-        if m.id == idx:
-            del msg_db[i]
-            return msg_db
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Msg not found")
+# Страница одного сообщения
+@app.get("/web/messages/{message_id}", response_class=HTMLResponse)
+async def get_message_detail_page(request: Request, message_id: int):
+    for message in messages_db:
+        if message.id == message_id:
+            return templates.TemplateResponse("detail.html", {"request": request, "message": message})
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Сообщение не найдено")
