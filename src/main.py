@@ -1,17 +1,28 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
+from pydantic import BaseModel
+from starlette import status
 
 app = FastAPI()
 
+class Post(BaseModel):
+    id: int
+    text: str
 
-async def pagination_func(limit: int = 10, page: int = 1):
-    return [{'limit': limit, 'page': page}]
-
-
-@app.get("/messages")
-async def all_messages(pagination: list = Depends(pagination_func)):
-    return {"messages": pagination}
+db = []
 
 
-@app.get("/comments")
-async def all_comments(pagination: list = Depends(pagination_func)):
-    return {"comments": pagination}
+async def get_post_or_404(id: int):
+    try:
+        return db[id]
+    except IndexError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+@app.get("/message/{id}")
+async def get_message(post: Post = Depends(get_post_or_404)):
+    return post
+
+@app.post("/message", status_code=status.HTTP_201_CREATED)
+async def create_message(post: Post) -> str:
+    post.id = len(db)
+    db.append(post)
+    return f"Message created!"
