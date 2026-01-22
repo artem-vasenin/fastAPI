@@ -1,28 +1,21 @@
-from fastapi import FastAPI, Depends, HTTPException
-from pydantic import BaseModel
-from starlette import status
+from fastapi import FastAPI
 
-app = FastAPI()
-
-class Post(BaseModel):
-    id: int
-    text: str
-
-db = []
+from .routes import categories, products
 
 
-async def get_post_or_404(id: int):
-    try:
-        return db[id]
-    except IndexError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+# Создаём приложение FastAPI
+app = FastAPI(
+    title="FastAPI Интернет-магазин",
+    version="0.1.0",
+)
 
-@app.get("/message/{id}")
-async def get_message(post: Post = Depends(get_post_or_404)):
-    return post
+# Подключаем маршруты категорий
+app.include_router(categories.router)
+app.include_router(products.router)
 
-@app.post("/message", status_code=status.HTTP_201_CREATED)
-async def create_message(post: Post) -> str:
-    post.id = len(db)
-    db.append(post)
-    return f"Message created!"
+
+# Корневой эндпоинт для проверки
+@app.get("/")
+async def root():
+    """ Корневой маршрут, подтверждающий, что API работает. """
+    return {"message": "Добро пожаловать в API интернет-магазина!"}
